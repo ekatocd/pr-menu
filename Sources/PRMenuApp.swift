@@ -3,7 +3,7 @@ import Combine
 import SwiftUI
 
 @main
-struct DevDashboardApp: App {
+struct PRMenuApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "DevDashboard",
+    name: "PRMenu",
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(
-            name: "DevDashboard",
+            name: "PRMenu",
             path: "Sources"
         ),
     ]
