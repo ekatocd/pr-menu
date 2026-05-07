@@ -20,23 +20,35 @@ final class PRService: ObservableObject {
     private var refreshTimer: AnyCancellable?
     private var previousStatusSnapshot: [String: PRStatus] = [:]
 
-    private static let graphQLQuery = """
-    {
-      search(query: "is:pr is:open author:@me", type: ISSUE, first: 100) {
-        nodes {
-          ... on PullRequest {
-            number title url state createdAt updatedAt isDraft reviewDecision
-            repository { nameWithOwner }
-            commits(last: 1) {
-              nodes { commit { statusCheckRollup { state } } }
+    private let orgFilter: String?
+
+    private var graphQLQuery: String {
+        let orgClause = orgFilter.map { " org:\($0)" } ?? ""
+        return """
+        {
+          search(query: "is:pr is:open author:@me\(orgClause)", type: ISSUE, first: 100) {
+            nodes {
+              ... on PullRequest {
+                number title url state createdAt updatedAt isDraft reviewDecision
+                repository { nameWithOwner }
+                reviewThreads(first: 100) { nodes { isResolved } }
+                commits(last: 1) {
+                  nodes { commit {
+                    statusCheckRollup { state }
+                    checkSuites(first: 20) {
+                      nodes { workflowRun { databaseId } }
+                    }
+                  } }
+                }
+              }
             }
           }
         }
-      }
+        """
     }
-    """
 
-    init(commandRunner: any CommandRunner = ProcessCommandRunner()) {
+    init(orgFilter: String? = nil, commandRunner: any CommandRunner = ProcessCommandRunner()) {
+        self.orgFilter = orgFilter
         self.commandRunner = commandRunner
     }
 
@@ -67,7 +79,7 @@ final class PRService: ObservableObject {
             let gh = try findGh()
             let data = try await commandRunner.run(
                 executable: gh,
-                arguments: ["api", "graphql", "-f", "query=\(Self.graphQLQuery)"]
+                arguments: ["api", "graphql", "-f", "query=\(graphQLQuery)"]
             )
 
             let decoder = JSONDecoder()
@@ -90,6 +102,24 @@ final class PRService: ObservableObject {
             if pullRequests.isEmpty {
                 errorMessage = "Failed to fetch PRs"
             }
+        }
+    }
+
+    func rerunChecks(for pr: PullRequest) async {
+        guard !pr.workflowRunIds.isEmpty else { return }
+        do {
+            let gh = try findGh()
+            for runId in pr.workflowRunIds {
+                _ = try? await commandRunner.run(
+                    executable: gh,
+                    arguments: ["run", "rerun", "\(runId)", "-R", pr.repository.nameWithOwner]
+                )
+            }
+            // Refresh after a short delay to pick up new status
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await fetchPRs()
+        } catch {
+            // gh not found — already shown elsewhere
         }
     }
 

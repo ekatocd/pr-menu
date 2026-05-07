@@ -13,12 +13,23 @@ struct DevDashboardApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let prService = PRService()
+    private lazy var prService: PRService = {
+        let org = Self.parseOrgFlag()
+        return PRService(orgFilter: org)
+    }()
     private let popover = NSPopover()
     private var statusItem: NSStatusItem?
     private var cancellables = Set<AnyCancellable>()
     private var flashTimer: Timer?
     private var flashTick = 0
+
+    private static func parseOrgFlag() -> String? {
+        let args = CommandLine.arguments
+        guard let idx = args.firstIndex(of: "--org"), idx + 1 < args.count else {
+            return nil
+        }
+        return args[idx + 1]
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)

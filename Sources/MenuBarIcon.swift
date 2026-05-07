@@ -16,7 +16,11 @@ enum MenuBarIcon {
             return .systemGreen
         case .pending:
             return .systemOrange
+        case .unresolvedComments:
+            return .systemPurple
         case .attention:
+            return .systemRed
+        case .changesRequested:
             return .systemRed
         case .unknown:
             return .secondaryLabelColor

@@ -22,9 +22,23 @@ struct PullRequest: Codable, Identifiable, Sendable {
     let isDraft: Bool
     let reviewDecision: String?
     let repository: Repository
+    let reviewThreads: ReviewThreadConnection?
     let commits: CommitConnection
 
     var id: String { "\(repository.nameWithOwner)#\(number)" }
+
+    var workflowRunIds: [Int] {
+        commits.nodes.first?.commit.checkSuites?.nodes
+            .compactMap { $0.workflowRun?.databaseId } ?? []
+    }
+
+    var unresolvedCommentCount: Int {
+        reviewThreads?.nodes.filter { !$0.isResolved }.count ?? 0
+    }
+
+    var hasUnresolvedComments: Bool {
+        unresolvedCommentCount > 0
+    }
 
     var ciStatus: CIStatus {
         guard let state = commits.nodes.first?.commit.statusCheckRollup?.state.uppercased() else {
@@ -61,24 +75,35 @@ struct PullRequest: Codable, Identifiable, Sendable {
     }
 
     var overallStatus: PRStatus {
-        if reviewStatus == .changesRequested || ciStatus == .failing {
+        if reviewStatus == .changesRequested {
+            return .changesRequested
+        }
+        if ciStatus == .failing {
             return .attention
         }
-
-        if reviewStatus == .reviewRequired || ciStatus == .pending {
+        if hasUnresolvedComments {
+            return .unresolvedComments
+        }
+        if ciStatus == .pending {
             return .pending
         }
-
-        if reviewStatus == .approved && ciStatus == .passing {
+        if ciStatus == .passing {
             return .clear
         }
-
         return .unknown
     }
 }
 
 struct Repository: Codable, Hashable, Sendable {
     let nameWithOwner: String
+}
+
+struct ReviewThreadConnection: Codable, Sendable {
+    let nodes: [ReviewThread]
+}
+
+struct ReviewThread: Codable, Sendable {
+    let isResolved: Bool
 }
 
 struct CommitConnection: Codable, Sendable {
@@ -91,10 +116,23 @@ struct CommitNode: Codable, Sendable {
 
 struct CommitInfo: Codable, Sendable {
     let statusCheckRollup: StatusCheckRollup?
+    let checkSuites: CheckSuiteConnection?
 }
 
 struct StatusCheckRollup: Codable, Sendable {
     let state: String
+}
+
+struct CheckSuiteConnection: Codable, Sendable {
+    let nodes: [CheckSuiteNode]
+}
+
+struct CheckSuiteNode: Codable, Sendable {
+    let workflowRun: WorkflowRunRef?
+}
+
+struct WorkflowRunRef: Codable, Sendable {
+    let databaseId: Int
 }
 
 enum CIStatus: Equatable, Sendable {
@@ -115,7 +153,9 @@ enum PRStatus: Comparable, Equatable, Sendable {
     case clear
     case unknown
     case pending
+    case unresolvedComments
     case attention
+    case changesRequested
 
     private var severity: Int {
         switch self {
@@ -125,8 +165,12 @@ enum PRStatus: Comparable, Equatable, Sendable {
             return 1
         case .pending:
             return 2
-        case .attention:
+        case .unresolvedComments:
             return 3
+        case .attention:
+            return 4
+        case .changesRequested:
+            return 5
         }
     }
 

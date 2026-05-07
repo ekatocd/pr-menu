@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PRRowView: View {
     let pr: PullRequest
+    let onRerun: () -> Void
 
     var body: some View {
         Button(action: openPullRequest) {
@@ -36,6 +37,12 @@ struct PRRowView: View {
         }
         .buttonStyle(.plain)
         .opacity(pr.isDraft ? 0.6 : 1)
+        .contextMenu {
+            Button("Open in Browser") { openPullRequest() }
+            if !pr.workflowRunIds.isEmpty {
+                Button("Rerun All Checks") { onRerun() }
+            }
+        }
     }
 
     @ViewBuilder
@@ -60,37 +67,33 @@ struct PRRowView: View {
 
     @ViewBuilder
     private var statusLabels: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             switch pr.reviewStatus {
             case .approved:
-                Label("Approved", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                StatusBadge("Approved", icon: "checkmark.circle.fill", color: .green)
             case .changesRequested:
-                Label("Changes requested", systemImage: "xmark.circle.fill")
-                    .foregroundStyle(.red)
+                StatusBadge("Changes requested", icon: "xmark.circle.fill", color: .red)
             case .reviewRequired:
-                Label("Review pending", systemImage: "clock.fill")
-                    .foregroundStyle(.orange)
+                StatusBadge("Review pending", icon: "clock.fill", color: .orange)
             case .none:
                 EmptyView()
             }
 
             switch pr.ciStatus {
             case .passing:
-                Text("CI passing")
-                    .foregroundStyle(.green)
+                StatusBadge("CI passing", color: .green)
             case .failing:
-                Text("CI failing")
-                    .foregroundStyle(.red)
+                StatusBadge("CI failing", color: .red)
             case .pending:
-                Text("CI pending")
-                    .foregroundStyle(.orange)
+                StatusBadge("CI pending", color: .orange)
             case .unknown:
                 EmptyView()
             }
+
+            if pr.hasUnresolvedComments {
+                StatusBadge("\(pr.unresolvedCommentCount) unresolved", icon: "bubble.left.fill", color: .purple)
+            }
         }
-        .font(.system(size: 11, weight: .medium))
-        .labelStyle(.titleAndIcon)
     }
 
     private var statusColor: Color {
@@ -99,7 +102,9 @@ struct PRRowView: View {
             return .green
         case .pending:
             return .orange
-        case .attention:
+        case .unresolvedComments:
+            return .purple
+        case .attention, .changesRequested:
             return .red
         case .unknown:
             return .secondary
@@ -130,5 +135,31 @@ extension Date {
         }
 
         return "\(hours / 24)d"
+    }
+}
+
+private struct StatusBadge: View {
+    let text: String
+    let icon: String?
+    let color: Color
+
+    init(_ text: String, icon: String? = nil, color: Color) {
+        self.text = text
+        self.icon = icon
+        self.color = color
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            if let icon {
+                Image(systemName: icon)
+            }
+            Text(text)
+        }
+        .font(.system(size: 10, weight: .medium))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(color, in: Capsule())
     }
 }

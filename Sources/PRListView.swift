@@ -68,9 +68,11 @@ struct PRListView: View {
                             .padding(.horizontal, 16)
 
                         ForEach(group.prs) { pr in
-                            PRRowView(pr: pr)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 4)
+                            PRRowView(pr: pr) {
+                                Task { await service.rerunChecks(for: pr) }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 4)
                         }
                     }
 
