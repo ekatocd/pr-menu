@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PRRowView: View {
     let pr: PullRequest
+    var showAuthor = false
     let onRerun: () -> Void
 
     var body: some View {
@@ -22,6 +23,12 @@ struct PRRowView: View {
                         Text("#\(pr.number)")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
+
+                        if showAuthor, let author = pr.author {
+                            Text("@\(author.login)")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
 
                     statusLabels

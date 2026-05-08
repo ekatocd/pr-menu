@@ -27,10 +27,11 @@ struct ProcessCommandRunner: CommandRunner {
             process.waitUntilExit()
 
             let output = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            _ = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let stderrData = errorPipe.fileHandleForReading.readDataToEndOfFile()
 
             guard process.terminationStatus == 0 else {
-                throw CommandError.nonZeroExit(process.terminationStatus)
+                let stderr = String(data: stderrData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                throw CommandError.nonZeroExit(process.terminationStatus, stderr)
             }
 
             return output
@@ -39,6 +40,6 @@ struct ProcessCommandRunner: CommandRunner {
 }
 
 enum CommandError: Error, Equatable, Sendable {
-    case nonZeroExit(Int32)
+    case nonZeroExit(Int32, String)
     case notFound
 }

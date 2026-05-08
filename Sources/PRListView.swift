@@ -13,18 +13,35 @@ struct PRListView: View {
             Divider()
             footer
         }
-        .frame(width: 320)
+        .frame(width: 400)
     }
 
     private var header: some View {
         HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("My Pull Requests")
-                    .font(.system(size: 14, weight: .semibold))
+            VStack(alignment: .leading, spacing: 4) {
+                if service.availableFilters.count > 1 {
+                    Picker("", selection: $service.activeFilter) {
+                        ForEach(service.availableFilters) { filter in
+                            Text(filter.rawValue).tag(filter)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 180)
+                } else {
+                    Text("My Pull Requests")
+                        .font(.system(size: 14, weight: .semibold))
+                }
 
-                Text(updatedText)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    if service.activeFilter != .mine && !service.teamFilters.isEmpty {
+                        teamPicker
+                    }
+
+                    Text(updatedText)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -39,9 +56,24 @@ struct PRListView: View {
         .padding(.vertical, 12)
     }
 
+    private var teamPicker: some View {
+        Picker("", selection: $service.selectedTeam) {
+            Text("All teams").tag(nil as String?)
+            ForEach(service.teamFilters, id: \.self) { team in
+                Text(team).tag(team as String?)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .font(.system(size: 11))
+        .frame(maxWidth: 120)
+    }
+
     @ViewBuilder
     private var content: some View {
-        if let errorMessage = service.errorMessage, service.pullRequests.isEmpty {
+        if service.isLoading {
+            loadingView
+        } else if let errorMessage = service.errorMessage, service.pullRequests.isEmpty {
             errorView(message: errorMessage)
         } else if service.pullRequests.isEmpty {
             emptyView
@@ -68,7 +100,7 @@ struct PRListView: View {
                             .padding(.horizontal, 16)
 
                         ForEach(group.prs) { pr in
-                            PRRowView(pr: pr) {
+                            PRRowView(pr: pr, showAuthor: service.activeFilter != .mine) {
                                 Task { await service.rerunChecks(for: pr) }
                             }
                             .padding(.horizontal, 16)
@@ -92,6 +124,18 @@ struct PRListView: View {
                 .font(.system(size: 32))
             Text("No open PRs")
                 .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+            Text("Fetching pull requests…")
+                .font(.system(size: 13))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -152,8 +196,12 @@ struct PRListView: View {
     }
 
     private var openPRCountText: String {
-        let count = service.pullRequests.count
-        let suffix = count == 1 ? "PR" : "PRs"
-        return "\(count) open \(suffix)"
+        let mine = service.myPRs.count
+        let team = service.teamPRs.count
+        if team > 0 {
+            return "\(mine) mine · \(team) team"
+        }
+        let suffix = mine == 1 ? "PR" : "PRs"
+        return "\(mine) open \(suffix)"
     }
 }

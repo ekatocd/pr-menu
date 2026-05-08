@@ -10,6 +10,13 @@ enum MenuBarIcon {
         count > 0 ? "\(count)" : nil
     }
 
+    static func badgeText(mine: Int, team: Int) -> String? {
+        if team > 0 {
+            return "\(mine)|\(team)"
+        }
+        return mine > 0 ? "\(mine)" : nil
+    }
+
     static func nsColor(for status: PRStatus) -> NSColor {
         switch status {
         case .clear:

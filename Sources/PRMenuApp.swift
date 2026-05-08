@@ -14,8 +14,8 @@ struct PRMenuApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var prService: PRService = {
-        let org = Self.parseOrgFlag()
-        return PRService(orgFilter: org)
+        let (org, teams) = Self.resolveConfig()
+        return PRService(orgFilter: org, teamFilters: teams)
     }()
     private let popover = NSPopover()
     private var statusItem: NSStatusItem?
@@ -23,12 +23,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var flashTimer: Timer?
     private var flashTick = 0
 
-    private static func parseOrgFlag() -> String? {
-        let args = CommandLine.arguments
-        guard let idx = args.firstIndex(of: "--org"), idx + 1 < args.count else {
-            return nil
+    /// Reads config from ~/.config/pr-menu/config.json, then lets CLI args override.
+    private static func resolveConfig() -> (org: String?, teams: [String]) {
+        // 1. Load config file defaults
+        var org: String?
+        var teams: [String] = []
+
+        let configPath = NSString("~/.config/pr-menu/config.json").expandingTildeInPath
+        if let data = FileManager.default.contents(atPath: configPath),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            org = json["org"] as? String
+            teams = json["teams"] as? [String] ?? []
         }
-        return args[idx + 1]
+
+        // 2. CLI args override config file
+        let args = CommandLine.arguments
+        if let idx = args.firstIndex(of: "--org"), idx + 1 < args.count {
+            org = args[idx + 1]
+        }
+
+        var cliTeams: [String] = []
+        var i = 0
+        while i < args.count {
+            if args[i] == "--team", i + 1 < args.count {
+                cliTeams.append(args[i + 1])
+                i += 2
+            } else {
+                i += 1
+            }
+        }
+        if !cliTeams.isEmpty {
+            teams = cliTeams
+        }
+
+        return (org, teams)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -38,7 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.statusItem = statusItem
 
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 320, height: 480)
+        popover.contentSize = NSSize(width: 400, height: 480)
         popover.contentViewController = NSHostingController(rootView: PRListView(service: prService))
 
         if let button = statusItem.button {
@@ -47,7 +75,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.imagePosition = .imageLeading
         }
 
-        prService.$pullRequests
+        prService.$myPRs
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.updateIcon()
+                }
+            }
+            .store(in: &cancellables)
+
+        prService.$teamPRs
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
@@ -97,7 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         button.image = MenuBarIcon.createIcon(status: prService.aggregateStatus)
-        button.title = MenuBarIcon.badgeText(for: prService.pullRequests.count) ?? ""
+        button.title = MenuBarIcon.badgeText(mine: prService.myPRs.count, team: prService.teamPRs.count) ?? ""
     }
 
     private func flashIcon() {

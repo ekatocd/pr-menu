@@ -12,6 +12,34 @@ struct SearchResult: Codable, Sendable {
     let nodes: [PullRequest]
 }
 
+struct TeamGraphQLResponse: Decodable, Sendable {
+    let data: TeamSearchData
+}
+
+struct TeamSearchData: Decodable, Sendable {
+    let results: [SearchResult]
+
+    var allPullRequests: [PullRequest] {
+        results.flatMap(\.nodes)
+    }
+
+    private struct DynamicKey: CodingKey {
+        var stringValue: String
+        init?(stringValue: String) { self.stringValue = stringValue }
+        var intValue: Int? { nil }
+        init?(intValue: Int) { nil }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: DynamicKey.self)
+        results = try container.allKeys.map { try container.decode(SearchResult.self, forKey: $0) }
+    }
+}
+
+struct Author: Codable, Sendable {
+    let login: String
+}
+
 struct PullRequest: Codable, Identifiable, Sendable {
     let number: Int
     let title: String
@@ -21,6 +49,7 @@ struct PullRequest: Codable, Identifiable, Sendable {
     let updatedAt: Date
     let isDraft: Bool
     let reviewDecision: String?
+    let author: Author?
     let repository: Repository
     let reviewThreads: ReviewThreadConnection?
     let commits: CommitConnection
@@ -184,6 +213,14 @@ struct PRGroup: Identifiable, Sendable {
     let prs: [PullRequest]
 
     var id: String { repo }
+}
+
+enum PRFilter: String, CaseIterable, Identifiable, Sendable {
+    case mine = "Mine"
+    case team = "Team"
+    case all  = "All"
+
+    var id: String { rawValue }
 }
 
 extension PullRequest {

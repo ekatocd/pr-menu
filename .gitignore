@@ -9,3 +9,4 @@ DerivedData/
 .build/
 .superpowers/
 .swiftpm/
+.vscode/
