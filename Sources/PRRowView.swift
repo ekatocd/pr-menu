@@ -24,6 +24,16 @@ struct PRRowView: View {
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
 
+                        if let ageText = pr.ageLabel {
+                            Text(ageText)
+                                .font(.system(size: 10, weight: .medium))
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(pr.ageColor.opacity(0.15))
+                                .foregroundStyle(pr.ageColor)
+                                .clipShape(RoundedRectangle(cornerRadius: 3))
+                        }
+
                         if showAuthor, let author = pr.author {
                             Text("@\(author.login)")
                                 .font(.system(size: 11))

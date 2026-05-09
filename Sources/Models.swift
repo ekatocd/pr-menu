@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct GraphQLResponse: Codable, Sendable {
     let data: SearchData
@@ -44,7 +45,6 @@ struct PullRequest: Codable, Identifiable, Sendable {
     let number: Int
     let title: String
     let url: URL
-    let state: String
     let createdAt: Date
     let updatedAt: Date
     let isDraft: Bool
@@ -120,6 +120,49 @@ struct PullRequest: Codable, Identifiable, Sendable {
             return .clear
         }
         return .unknown
+    }
+
+    // MARK: - Staleness & Attention
+
+    var ageDays: Int {
+        Int(Date().timeIntervalSince(createdAt) / 86400)
+    }
+
+    var staleDays: Int {
+        Int(Date().timeIntervalSince(updatedAt) / 86400)
+    }
+
+    var needsAttention: Bool {
+        if isDraft { return false }
+        return reviewStatus == .changesRequested
+            || ciStatus == .failing
+            || staleDays >= 3
+            || (reviewStatus == .reviewRequired && ageDays >= 2)
+    }
+
+    var attentionScore: Int {
+        var score = 0
+        if reviewStatus == .changesRequested { score += 40 }
+        if ciStatus == .failing { score += 30 }
+        if hasUnresolvedComments { score += 10 }
+        score += min(staleDays * 3, 30)  // up to 30 for staleness
+        score += min(ageDays, 20)        // up to 20 for age
+        return score
+    }
+
+    var ageLabel: String? {
+        let days = ageDays
+        if days < 3 { return nil }
+        if days < 7 { return "\(days)d" }
+        let weeks = days / 7
+        return "\(weeks)w"
+    }
+
+    var ageColor: Color {
+        let days = ageDays
+        if days < 3 { return .green }
+        if days < 7 { return .orange }
+        return .red
     }
 }
 
@@ -217,7 +260,7 @@ struct PRGroup: Identifiable, Sendable {
 
 enum PRFilter: String, CaseIterable, Identifiable, Sendable {
     case mine = "Mine"
-    case team = "Team"
+    case priority = "Priority"
     case all  = "All"
 
     var id: String { rawValue }

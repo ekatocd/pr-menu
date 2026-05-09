@@ -42,7 +42,7 @@ DevDashboard/
 - [ ] **Step 1: Initialize SPM package**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift package init --type executable --name DevDashboard
 ```
 
@@ -105,7 +105,7 @@ final class PlaceholderTests: XCTestCase {
 - [ ] **Step 5: Verify build and test**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift build 2>&1
 swift test 2>&1
 ```
@@ -115,7 +115,7 @@ Expected: Both commands succeed with no errors.
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git init
 echo ".build/" > .gitignore
 echo ".superpowers/" >> .gitignore
@@ -285,7 +285,7 @@ final class ModelsTests: XCTestCase {
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift test 2>&1
 ```
 
@@ -423,7 +423,7 @@ extension PullRequest {
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift test --filter ModelsTests 2>&1
 ```
 
@@ -432,7 +432,7 @@ Expected: All 5 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "feat: add data models with JSON decoding and status computation
 
@@ -487,7 +487,7 @@ enum CommandError: Error, Equatable {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift build 2>&1
 ```
 
@@ -496,7 +496,7 @@ Expected: Build succeeds.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "feat: add CommandRunner protocol for testable process execution
 
@@ -701,7 +701,7 @@ final class PRServiceTests: XCTestCase {
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift test --filter PRServiceTests 2>&1
 ```
 
@@ -840,7 +840,7 @@ final class PRService: ObservableObject {
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift test --filter PRServiceTests 2>&1
 ```
 
@@ -849,7 +849,7 @@ Expected: All 6 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "feat: add PRService with gh GraphQL integration and diff detection
 
@@ -910,7 +910,7 @@ final class MenuBarIconTests: XCTestCase {
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift test --filter MenuBarIconTests 2>&1
 ```
 
@@ -998,7 +998,7 @@ enum MenuBarIcon {
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift test --filter MenuBarIconTests 2>&1
 ```
 
@@ -1007,7 +1007,7 @@ Expected: All 6 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "feat: add menu bar icon with status-based tinting
 
@@ -1137,7 +1137,7 @@ extension Date {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift build 2>&1
 ```
 
@@ -1146,7 +1146,7 @@ Expected: Build succeeds.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "feat: add PRRowView with status indicators
 
@@ -1293,7 +1293,7 @@ struct PRListView: View {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift build 2>&1
 ```
 
@@ -1302,7 +1302,7 @@ Expected: Build succeeds.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "feat: add PRListView with grouped layout and error states
 
@@ -1416,7 +1416,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift build 2>&1
 ```
 
@@ -1425,7 +1425,7 @@ Expected: Build succeeds.
 - [ ] **Step 3: Run all tests**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift test 2>&1
 ```
 
@@ -1434,7 +1434,7 @@ Expected: All tests pass (Models, PRService, MenuBarIcon).
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "feat: wire up app with NSStatusItem, popover, and flash animation
 
@@ -1448,7 +1448,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 - [ ] **Step 1: Build and launch the app**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 swift build 2>&1
 .build/debug/DevDashboard &
 ```
@@ -1471,7 +1471,7 @@ Wait for auto-refresh or click refresh. The icon should:
 - [ ] **Step 4: Commit any fixes from testing**
 
 ```bash
-cd /Users/kyle/dev-dashboard
+cd /Users/yourname/dev-dashboard
 git add -A
 git commit -m "fix: integration test fixes
 

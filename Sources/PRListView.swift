@@ -83,8 +83,27 @@ struct PRListView: View {
                     warningBanner(message: errorMessage)
                 }
 
-                groupedList
+                if service.activeFilter == .priority {
+                    flatList
+                } else {
+                    groupedList
+                }
             }
+        }
+    }
+
+    private var flatList: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 4) {
+                ForEach(service.pullRequests) { pr in
+                    PRRowView(pr: pr, showAuthor: true) {
+                        Task { await service.rerunChecks(for: pr) }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                }
+            }
+            .padding(.vertical, 12)
         }
     }
 

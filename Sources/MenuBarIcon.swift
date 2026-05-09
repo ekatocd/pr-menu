@@ -1,15 +1,6 @@
 import AppKit
 
 enum MenuBarIcon {
-    static func aggregateColor(for statuses: [PRStatus]) -> PRStatus {
-        guard !statuses.isEmpty else { return .unknown }
-        return statuses.max() ?? .unknown
-    }
-
-    static func badgeText(for count: Int) -> String? {
-        count > 0 ? "\(count)" : nil
-    }
-
     static func badgeText(mine: Int, team: Int) -> String? {
         if team > 0 {
             return "\(mine)|\(team)"

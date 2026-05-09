@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     private var flashTimer: Timer?
     private var flashTick = 0
+    private var eventMonitor: Any?
 
     /// Reads config from ~/.config/pr-menu/config.json, then lets CLI args override.
     private static func resolveConfig() -> (org: String?, teams: [String]) {
@@ -121,10 +122,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if popover.isShown {
             popover.performClose(nil)
+            if let monitor = eventMonitor {
+                NSEvent.removeMonitor(monitor)
+                eventMonitor = nil
+            }
         } else {
             prService.refresh()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             NSApp.activate(ignoringOtherApps: true)
+
+            eventMonitor = NSEvent.addGlobalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown]
+            ) { [weak self] _ in
+                self?.popover.performClose(nil)
+                if let monitor = self?.eventMonitor {
+                    NSEvent.removeMonitor(monitor)
+                    self?.eventMonitor = nil
+                }
+            }
         }
     }
 

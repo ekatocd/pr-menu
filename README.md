@@ -53,7 +53,7 @@ swift build
 .build/debug/PRMenu
 
 # Filter to a specific org
-.build/debug/PRMenu --org fulcrumapp
+.build/debug/PRMenu --org your-org
 ```
 
 The app runs as a menu bar icon — click it to open the PR list popover.
@@ -61,7 +61,7 @@ The app runs as a menu bar icon — click it to open the PR list popover.
 ## Run in background
 
 ```sh
-.build/debug/PRMenu --org fulcrumapp &
+.build/debug/PRMenu --org your-org &
 disown
 ```
 

@@ -18,11 +18,25 @@ final class PRService: ObservableObject {
     var pullRequests: [PullRequest] {
         switch activeFilter {
         case .mine: return myPRs
-        case .team: return filteredTeamPRs
+        case .priority: return priorityPRs
         case .all:
             let teamOnly = filteredTeamPRs.filter { pr in !myPRs.contains(where: { $0.id == pr.id }) }
             return myPRs + teamOnly
         }
+    }
+
+    /// PRs (mine + team) that need attention, sorted by urgency
+    private var priorityPRs: [PullRequest] {
+        let allPRs: [PullRequest]
+        if isTeamMode {
+            let teamOnly = filteredTeamPRs.filter { pr in !myPRs.contains(where: { $0.id == pr.id }) }
+            allPRs = myPRs + teamOnly
+        } else {
+            allPRs = myPRs
+        }
+        return allPRs
+            .filter { $0.needsAttention }
+            .sorted { $0.attentionScore > $1.attentionScore }
     }
 
     private var filteredTeamPRs: [PullRequest] {
@@ -57,27 +71,32 @@ final class PRService: ObservableObject {
 
     var isTeamMode: Bool { !teamFilters.isEmpty }
 
+    /// Shared GraphQL fragment for PR fields (used by both personal and team queries)
+    private static let prFieldsFragment = """
+        nodes {
+          ... on PullRequest {
+            number title url createdAt updatedAt isDraft reviewDecision
+            author { login }
+            repository { nameWithOwner }
+            reviewThreads(first: 100) { nodes { isResolved } }
+            commits(last: 1) {
+              nodes { commit {
+                statusCheckRollup { state }
+                checkSuites(first: 20) {
+                  nodes { workflowRun { databaseId } }
+                }
+              } }
+            }
+          }
+        }
+    """
+
     private var graphQLQuery: String {
         let orgClause = orgFilter.map { " org:\($0)" } ?? ""
         return """
         {
           search(query: "is:pr is:open author:@me\(orgClause)", type: ISSUE, first: 100) {
-            nodes {
-              ... on PullRequest {
-                number title url state createdAt updatedAt isDraft reviewDecision
-                author { login }
-                repository { nameWithOwner }
-                reviewThreads(first: 100) { nodes { isResolved } }
-                commits(last: 1) {
-                  nodes { commit {
-                    statusCheckRollup { state }
-                    checkSuites(first: 20) {
-                      nodes { workflowRun { databaseId } }
-                    }
-                  } }
-                }
-              }
-            }
+            \(Self.prFieldsFragment)
           }
         }
         """
@@ -201,26 +220,8 @@ final class PRService: ObservableObject {
 
     private func teamGraphQLQuery(members: [String]) -> String {
         let orgClause = orgFilter.map { " org:\($0)" } ?? ""
-        let fields = """
-            nodes {
-              ... on PullRequest {
-                number title url state createdAt updatedAt isDraft reviewDecision
-                author { login }
-                repository { nameWithOwner }
-                reviewThreads(first: 100) { nodes { isResolved } }
-                commits(last: 1) {
-                  nodes { commit {
-                    statusCheckRollup { state }
-                    checkSuites(first: 20) {
-                      nodes { workflowRun { databaseId } }
-                    }
-                  } }
-                }
-              }
-            }
-        """
         let searches = members.enumerated().map { index, login in
-            "user\(index): search(query: \"is:pr is:open author:\(login)\(orgClause)\", type: ISSUE, first: 100) { \(fields) }"
+            "user\(index): search(query: \"is:pr is:open author:\(login)\(orgClause)\", type: ISSUE, first: 100) { \(Self.prFieldsFragment) }"
         }.joined(separator: "\n    ")
         return "{\n    \(searches)\n}"
     }
