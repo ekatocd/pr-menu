@@ -8,6 +8,9 @@ A lightweight macOS menu bar app that shows your open GitHub pull requests at a 
 - **Auto-refresh** every 5 minutes
 - **Grouped by repo** for easy scanning
 - **Status badges** — CI status, review state, unresolved comment count
+- **Age badges** — colored pills showing PR staleness (e.g. "3d", "1w")
+- **Priority tab** — surfaces PRs needing attention, scored by staleness, failing CI, changes requested, and unresolved comments
+- **Team PRs** — view PRs authored by team members and PRs where the team is a requested reviewer, with sectioned grouping
 - **Click to open** any PR in your browser
 - **Right-click → Rerun All Checks** via `gh run rerun`
 - **Flash animation** when PR status changes
@@ -37,31 +40,37 @@ gh auth login
 ## Build
 
 ```sh
-swift build
+swift build -c release
+sudo cp .build/release/PRMenu /usr/local/bin/pr-menu
 ```
 
 ## Run
 
 ```sh
-# Show PRs from all orgs
-.build/debug/PRMenu
+# Show your PRs from all orgs
+pr-menu
 
 # Filter to a specific org
-.build/debug/PRMenu --org your-org
+pr-menu --org your-org
+
+# Include team PRs (requires --org)
+pr-menu --org your-org --team mobile-team --team backend-team
+
+# Run in foreground (useful for debugging)
+pr-menu --foreground
 ```
 
-The app runs as a menu bar icon — click it to open the PR list popover.
+The app runs as a menu bar icon — click it to open the PR list popover. Running `pr-menu` again will replace the previous instance.
 
-## Run in background
+## Configuration
 
-```sh
-.build/debug/PRMenu --org your-org &
-disown
+Create `~/.config/pr-menu/config.json` to set defaults:
+
+```json
+{
+  "org": "your-org",
+  "teams": ["mobile-team", "backend-team"]
+}
 ```
 
-## Release build
-
-```sh
-swift build -c release
-cp .build/release/PRMenu /usr/local/bin/pr-menu
-```
+CLI flags (`--org`, `--team`) override config file values.
