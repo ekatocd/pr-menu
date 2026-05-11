@@ -15,6 +15,9 @@ final class PRService: ObservableObject {
     /// Maps team slug → set of member logins
     private(set) var teamMembership: [String: Set<String>] = [:]
 
+    /// Maps team slug → PR IDs where the team is a requested reviewer
+    private var teamReviewRequestedIds: [String: Set<String>] = [:]
+
     var pullRequests: [PullRequest] {
         switch activeFilter {
         case .mine: return myPRs
@@ -44,14 +47,67 @@ final class PRService: ObservableObject {
               let members = teamMembership[selected] else {
             return teamPRs
         }
-        return teamPRs.filter { pr in
-            guard let login = pr.author?.login else { return false }
-            return members.contains(login)
-        }
+        let reviewIds = teamReviewRequestedIds[selected] ?? []
+        return teamPRs.filter { isMemberPR($0, members: members) || isReviewRequestedPR($0, reviewIds: reviewIds, members: members) }
     }
 
     var groupedPRs: [PRGroup] {
         PullRequest.grouped(pullRequests)
+    }
+
+    /// Whether the current view should show sectioned team groups (member vs review-requested)
+    var showTeamSections: Bool {
+        activeFilter != .mine && selectedTeam != nil
+    }
+
+    /// PRs authored by members of the selected team
+    var memberPRs: [PRGroup] {
+        PullRequest.grouped(memberFilteredPRs)
+    }
+
+    /// PRs where the selected team is a requested reviewer (excluding those already in memberPRs)
+    var reviewRequestedPRs: [PRGroup] {
+        PullRequest.grouped(reviewRequestedFilteredPRs)
+    }
+
+    /// Priority-filtered member PRs for the selected team
+    var priorityMemberPRs: [PullRequest] {
+        memberFilteredPRs
+            .filter(\.needsAttention)
+            .sorted { $0.attentionScore > $1.attentionScore }
+    }
+
+    /// Priority-filtered review-requested PRs for the selected team
+    var priorityReviewRequestedPRs: [PullRequest] {
+        reviewRequestedFilteredPRs
+            .filter(\.needsAttention)
+            .sorted { $0.attentionScore > $1.attentionScore }
+    }
+
+    // MARK: - Team filtering helpers
+
+    private var memberFilteredPRs: [PullRequest] {
+        guard let selected = selectedTeam,
+              let members = teamMembership[selected] else { return [] }
+        return teamPRs.filter { isMemberPR($0, members: members) }
+    }
+
+    private var reviewRequestedFilteredPRs: [PullRequest] {
+        guard let selected = selectedTeam else { return [] }
+        let reviewIds = teamReviewRequestedIds[selected] ?? []
+        let members = teamMembership[selected] ?? []
+        return teamPRs.filter { isReviewRequestedPR($0, reviewIds: reviewIds, members: members) }
+    }
+
+    private func isMemberPR(_ pr: PullRequest, members: Set<String>) -> Bool {
+        guard let login = pr.author?.login else { return false }
+        return members.contains(login)
+    }
+
+    private func isReviewRequestedPR(_ pr: PullRequest, reviewIds: Set<String>, members: Set<String>) -> Bool {
+        guard reviewIds.contains(pr.id) else { return false }
+        guard let login = pr.author?.login else { return true }
+        return !members.contains(login)
     }
 
     var aggregateStatus: PRStatus {
@@ -169,12 +225,33 @@ final class PRService: ObservableObject {
                             executable: gh,
                             arguments: ["api", "graphql", "-f", "query=\(query)"]
                         )
-                        let teamDecoder = JSONDecoder()
-                        teamDecoder.dateDecodingStrategy = .iso8601
-                        let teamResponse = try teamDecoder.decode(TeamGraphQLResponse.self, from: teamData)
+                        let teamResponse = try decoder.decode(TeamGraphQLResponse.self, from: teamData)
                         newTeamPRs.append(contentsOf: teamResponse.data.allPullRequests)
                     }
                 }
+
+                // Also fetch PRs where the team itself is a requested reviewer
+                var reviewIdsByTeam: [String: Set<String>] = [:]
+                for team in teamFilters {
+                    let reviewQuery = """
+                    {
+                      search(query: "is:pr is:open team-review-requested:\(orgFilter)/\(team)", type: ISSUE, first: 100) {
+                        \(Self.prFieldsFragment)
+                      }
+                    }
+                    """
+                    let reviewData = try await commandRunner.run(
+                        executable: gh,
+                        arguments: ["api", "graphql", "-f", "query=\(reviewQuery)"]
+                    )
+                    let reviewResponse = try decoder.decode(GraphQLResponse.self, from: reviewData)
+                    let reviewPRs = reviewResponse.data.search.nodes
+                    reviewIdsByTeam[team] = Set(reviewPRs.map(\.id))
+                    // Merge, deduplicating by PR id
+                    let existingIds = Set(newTeamPRs.map(\.id))
+                    newTeamPRs.append(contentsOf: reviewPRs.filter { !existingIds.contains($0.id) })
+                }
+                teamReviewRequestedIds = reviewIdsByTeam
             }
 
             let allNew = newMyPRs + newTeamPRs.filter { pr in !newMyPRs.contains(where: { $0.id == pr.id }) }

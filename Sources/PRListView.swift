@@ -83,7 +83,9 @@ struct PRListView: View {
                     warningBanner(message: errorMessage)
                 }
 
-                if service.activeFilter == .priority {
+                if service.showTeamSections {
+                    sectionedTeamList
+                } else if service.activeFilter == .priority {
                     flatList
                 } else {
                     groupedList
@@ -134,6 +136,72 @@ struct PRListView: View {
                 }
             }
             .padding(.vertical, 12)
+        }
+    }
+
+    private var sectionedTeamList: some View {
+        let isPriority = service.activeFilter == .priority
+        let memberPRs = isPriority ? service.priorityMemberPRs : []
+        let reviewPRs = isPriority ? service.priorityReviewRequestedPRs : []
+        let memberGroups = isPriority ? [] : service.memberPRs
+        let reviewGroups = isPriority ? [] : service.reviewRequestedPRs
+        let hasMember = !memberPRs.isEmpty || !memberGroups.isEmpty
+        let hasReview = !reviewPRs.isEmpty || !reviewGroups.isEmpty
+
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                if hasMember {
+                    sectionHeader("Team Member PRs")
+                    if isPriority { flatPRRows(memberPRs) } else { repoGroups(memberGroups) }
+                }
+
+                if hasMember && hasReview {
+                    Divider().padding(.vertical, 4)
+                }
+
+                if hasReview {
+                    sectionHeader("Review Requested")
+                    if isPriority { flatPRRows(reviewPRs) } else { repoGroups(reviewGroups) }
+                }
+            }
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func flatPRRows(_ prs: [PullRequest]) -> some View {
+        ForEach(prs) { pr in
+            PRRowView(pr: pr, showAuthor: true) {
+                Task { await service.rerunChecks(for: pr) }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 16)
+    }
+
+    private func repoGroups(_ groups: [PRGroup]) -> some View {
+        ForEach(groups) { group in
+            VStack(alignment: .leading, spacing: 8) {
+                Text(group.repo.uppercased())
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.5)
+                    .padding(.horizontal, 16)
+
+                ForEach(group.prs) { pr in
+                    PRRowView(pr: pr, showAuthor: true) {
+                        Task { await service.rerunChecks(for: pr) }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                }
+            }
         }
     }
 

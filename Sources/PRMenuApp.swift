@@ -2,7 +2,6 @@ import AppKit
 import Combine
 import SwiftUI
 
-@main
 struct PRMenuApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
