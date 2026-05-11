@@ -2,12 +2,6 @@
 
 A lightweight macOS menu bar app that shows your open GitHub pull requests at a glance.
 
-## Screenshots
-
-| Menu | Right-click actions |
-|------|---------------------|
-| ![PR list](screenshots/menu.png) | ![Context menu](screenshots/menu-with-actions.png) |
-
 ## Features
 
 - **Menu bar icon** with color-coded status (green/orange/red/purple)
