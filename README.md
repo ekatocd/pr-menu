@@ -41,7 +41,14 @@ gh auth login
 
 ```sh
 swift build -c release
-sudo cp .build/release/PRMenu /usr/local/bin/pr-menu
+mkdir -p ~/.local/bin
+cp .build/release/PRMenu ~/.local/bin/pr-menu
+```
+
+Make sure `~/.local/bin` is in your PATH (add to `~/.zshrc` if needed):
+
+```sh
+export PATH="${HOME}/.local/bin:${PATH}"
 ```
 
 ## Run

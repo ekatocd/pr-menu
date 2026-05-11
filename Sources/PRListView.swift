@@ -13,7 +13,7 @@ struct PRListView: View {
             Divider()
             footer
         }
-        .frame(width: 400)
+        .frame(width: 600)
     }
 
     private var header: some View {

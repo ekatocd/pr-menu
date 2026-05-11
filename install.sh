@@ -2,7 +2,7 @@
 set -euo pipefail
 
 APP_NAME="PRMenu"
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="${HOME}/.local/bin"
 INSTALL_PATH="${INSTALL_DIR}/pr-menu"
 LAUNCH_AGENT_DIR="${HOME}/Library/LaunchAgents"
 LAUNCH_AGENT_PLIST="${LAUNCH_AGENT_DIR}/com.corporealshift.pr-menu.plist"
@@ -53,11 +53,15 @@ swift build -c release
 # ── Install binary ───────────────────────────────────────────────
 
 info "Installing binary to ${INSTALL_PATH}…"
-if [[ ! -d "${INSTALL_DIR}" ]]; then
-    sudo mkdir -p "${INSTALL_DIR}"
+mkdir -p "${INSTALL_DIR}"
+cp ".build/release/${APP_NAME}" "${INSTALL_PATH}"
+chmod +x "${INSTALL_PATH}"
+
+# Ensure ~/.local/bin is in PATH
+if [[ ":${PATH}:" != *":${INSTALL_DIR}:"* ]]; then
+    warn "${INSTALL_DIR} is not in your PATH."
+    warn "Add this to your shell profile: export PATH=\"\${HOME}/.local/bin:\${PATH}\""
 fi
-sudo cp ".build/release/${APP_NAME}" "${INSTALL_PATH}"
-sudo chmod +x "${INSTALL_PATH}"
 
 info "Installed pr-menu to ${INSTALL_PATH}"
 
@@ -240,9 +244,7 @@ info "Installation complete!"
 
 read -rp "Launch pr-menu now? [Y/n] " launch_now
 if [[ ! "${launch_now}" =~ ^[Nn]$ ]]; then
-    pkill -f "pr-menu" 2>/dev/null || true
-    sleep 1
-    nohup "${INSTALL_PATH}" &>/dev/null &
+    "${INSTALL_PATH}"
     info "pr-menu is running."
 else
     info "Run 'pr-menu' to start."
